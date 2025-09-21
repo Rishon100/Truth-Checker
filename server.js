@@ -509,7 +509,7 @@ app.get('/', (req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Truth Checker Server v2.0 running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Truth Checker Server v2.0 running on port ${PORT}`);
   console.log(`📊 API Health Check: http://localhost:${PORT}/health`);
 });
