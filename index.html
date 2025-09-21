@@ -660,41 +660,47 @@ If YouTube transcript fails, you can:
 
         // Main verification function
         async function verifyInformation() {
-            const query = textInput.value.trim();
-            
-            if (query.length < 10) {
-                showError('Please enter at least 10 characters for meaningful verification.');
-                return;
-            }
+    const query = textInput.value.trim();
+    
+    if (query.length < 10) {
+        showError('Please enter at least 10 characters for meaningful verification.');
+        return;
+    }
 
-            verifyButton.disabled = true;
-            buttonText.innerHTML = '<div class="loader"></div> Analyzing...';
-            resultsSection.innerHTML = '<div style="text-align: center; padding: 40px; color: #718096;">Processing your request... This may take a few moments.</div>';
+    verifyButton.disabled = true;
+    buttonText.innerHTML = '<div class="loader"></div> Analyzing...';
+    resultsSection.innerHTML = '<div style="text-align: center; padding: 40px; color: #718096;">Processing your request... This may take a few moments.</div>';
 
-            try {
-                const response = await fetch('http://localhost:3000/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: query }),
-                });
+    try {
+        // ✅ Use this instead of the old fetch
+        const BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000'
+            : 'https://truth-checker.onrender.com';
 
-                const data = await response.json();
+        const response = await fetch(`${BASE_URL}/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: query }),
+        });
 
-                if (data.error) {
-                    showError(data.error);
-                    return;
-                }
+        const data = await response.json();
 
-                displayResults(data);
-
-            } catch (error) {
-                console.error("Verification error:", error);
-                showError('An error occurred while processing your request. Please check your connection and try again.');
-            } finally {
-                verifyButton.disabled = false;
-                buttonText.innerHTML = 'Verify Information';
-            }
+        if (data.error) {
+            showError(data.error);
+            return;
         }
+
+        displayResults(data);
+
+    } catch (error) {
+        console.error("Verification error:", error);
+        showError('An error occurred while processing your request. Please check your connection and try again.');
+    } finally {
+        verifyButton.disabled = false;
+        buttonText.innerHTML = 'Verify Information';
+    }
+}
+
 
         // Event listeners
         verifyButton.addEventListener('click', verifyInformation);
