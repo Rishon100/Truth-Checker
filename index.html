@@ -3,21 +3,709 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthCheck</title>
-    <link rel="stylesheet" href="style.css">
+    <title>TruthCheck - AI-Powered Fact Verification</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .supported-formats {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .format-tag {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-label {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .input-container {
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            resize: vertical;
+            background: #f8fafc;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .char-counter {
+            position: absolute;
+            bottom: 10px;
+            right: 15px;
+            color: #a0aec0;
+            font-size: 0.85rem;
+        }
+
+        .verify-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .verify-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .verify-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .loader {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 2px solid white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            margin-top: 30px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .verdict-box {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(66, 153, 225, 0.3);
+        }
+
+        .verdict-true { background: linear-gradient(135deg, #48bb78, #38a169); box-shadow: 0 8px 25px rgba(72, 187, 120, 0.3); }
+        .verdict-false { background: linear-gradient(135deg, #f56565, #e53e3e); box-shadow: 0 8px 25px rgba(245, 101, 101, 0.3); }
+        .verdict-partial { background: linear-gradient(135deg, #ed8936, #d69e2e); box-shadow: 0 8px 25px rgba(237, 137, 54, 0.3); }
+
+        .verdict-text {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .confidence-text {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-box {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2d3748;
+        }
+
+        .info-boxes {
+            display: grid;
+            gap: 20px;
+        }
+
+        .info-box {
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            animation: slideInUp 0.6s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .summary-box {
+            background: linear-gradient(135deg, #e6fffa, #b2f5ea);
+            border-left: 5px solid #38b2ac;
+        }
+
+        .evidence-box {
+            background: linear-gradient(135deg, #fef5e7, #fed7aa);
+            border-left: 5px solid #ed8936;
+        }
+
+        .sources-box {
+            background: linear-gradient(135deg, #e6f3ff, #bee3f8);
+            border-left: 5px solid #4299e1;
+        }
+
+        .context-box {
+            background: linear-gradient(135deg, #f7fafc, #e2e8f0);
+            border-left: 5px solid #718096;
+        }
+
+        .box-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .box-content {
+            line-height: 1.7;
+            color: #1a202c;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .box-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .box-content li {
+            margin: 10px 0;
+            line-height: 1.7;
+            color: #1a202c;
+            font-weight: 500;
+        }
+
+        .box-content strong {
+            font-weight: 700;
+            color: #1a202c;
+        }
+
+        .source-link {
+            display: inline-block;
+            background: #4299e1;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 500;
+            margin: 5px 5px 5px 0;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .source-link:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(65, 153, 225, 0.4);
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 5px solid #e53e3e;
+            margin-top: 20px;
+        }
+
+        .hidden { display: none !important; }
+
+        @media (max-width: 768px) {
+            .container { padding: 25px; }
+            .header h1 { font-size: 2rem; }
+            .results-grid, .charts-container { grid-template-columns: 1fr; }
+            .format-tag { font-size: 0.8rem; padding: 4px 10px; }
+        }
+    </style>
 </head>
 <body>
-    <main>
-        <h1>Verify Information Instantly</h1>
-        <p>Paste any text or ask a question to get an AI-powered analysis.</p>
-        <div class="input-box">
-            <textarea id="text-input" placeholder="Paste the text you want to fact-check here..."></textarea>
-            <button id="verify-button">Verify</button>
+    <div class="container">
+        <div class="header">
+            <h1>TruthCheck</h1>
+            <p>AI-Powered Fact Verification with Real-Time Sources</p>
+            <div class="supported-formats">
+                <span class="format-tag">YouTube Videos</span>
+                <span class="format-tag">Web Articles</span>
+                <span class="format-tag">Text Claims</span>
+                <span class="format-tag">News Stories</span>
+            </div>
         </div>
-        <div id="results-container">
-            <div id="loader" class="hidden"></div>
+
+        <div class="input-section">
+            <label class="input-label">Enter text, paste a URL, or ask a question to verify:</label>
+            <div class="input-container">
+                <textarea 
+                    id="text-input" 
+                    placeholder="Examples:
+• https://youtube.com/watch?v=... (YouTube video)
+• https://example.com/article (Web article)  
+• 'The Earth is flat' (Text claim)
+• 'What happened in the 2024 election?' (Question)
+
+If YouTube transcript fails, you can:
+1. Go to the YouTube video
+2. Click the transcript button (if available)
+3. Copy the text and paste it here instead of the URL"
+                    maxlength="2000"
+                ></textarea>
+                <span class="char-counter">
+                    <span id="char-count">0</span>/2000
+                </span>
+            </div>
         </div>
-    </main>
-    <script src="script.js"></script>
+
+        <button class="verify-button" id="verify-button">
+            <span class="button-text">Verify Information</span>
+        </button>
+
+        <div class="results-section" id="results-section">
+            <!-- Results will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const textInput = document.getElementById('text-input');
+        const verifyButton = document.getElementById('verify-button');
+        const resultsSection = document.getElementById('results-section');
+        const charCount = document.getElementById('char-count');
+        const buttonText = verifyButton.querySelector('.button-text');
+
+        let confidenceChart, verdictChart;
+
+        // Character counter
+        textInput.addEventListener('input', () => {
+            const length = textInput.value.length;
+            charCount.textContent = length;
+            
+            if (length > 1800) {
+                charCount.style.color = '#e53e3e';
+            } else if (length > 1500) {
+                charCount.style.color = '#d69e2e';
+            } else {
+                charCount.style.color = '#a0aec0';
+            }
+        });
+
+        // Parse and format results
+        function parseResults(text) {
+            const sections = {};
+            const lines = text.split('\n');
+            let currentSection = '';
+            let content = [];
+
+            for (const line of lines) {
+                if (line.startsWith('## ')) {
+                    if (currentSection && content.length) {
+                        sections[currentSection] = content.join('\n').trim();
+                    }
+                    currentSection = line.replace('## ', '').trim();
+                    content = [];
+                } else if (line.trim()) {
+                    content.push(line);
+                }
+            }
+            
+            if (currentSection && content.length) {
+                sections[currentSection] = content.join('\n').trim();
+            }
+
+            return sections;
+        }
+
+        // Create charts
+        function createCharts(confidence, verdict) {
+            // Destroy existing charts
+            if (confidenceChart) confidenceChart.destroy();
+            if (verdictChart) verdictChart.destroy();
+
+            // Confidence Line Chart
+            const ctx1 = document.getElementById('confidenceChart').getContext('2d');
+            confidenceChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['Initial', 'Evidence Review', 'Source Verification', 'Final Assessment'],
+                    datasets: [{
+                        label: 'Confidence Level',
+                        data: [30, 60, 85, confidence],
+                        borderColor: '#4299e1',
+                        backgroundColor: 'rgba(66, 153, 225, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#4299e1',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, max: 100, grid: { color: '#e2e8f0' } },
+                        x: { grid: { color: '#e2e8f0' } }
+                    }
+                }
+            });
+
+            // Verdict Pie Chart
+            const verdictColors = {
+                'TRUE': '#38a169',
+                'FALSE': '#e53e3e', 
+                'PARTIALLY TRUE': '#d69e2e',
+                'NEEDS MORE CONTEXT': '#3182ce'
+            };
+
+            const ctx2 = document.getElementById('verdictChart').getContext('2d');
+            verdictChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Confidence', 'Uncertainty'],
+                    datasets: [{
+                        data: [confidence, 100 - confidence],
+                        backgroundColor: [verdictColors[verdict] || '#4299e1', '#e2e8f0'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Format sources with "Visit Site" links and enhanced URL validation
+        function formatSources(sourcesText) {
+            if (!sourcesText) return '';
+            
+            const lines = sourcesText.split('\n');
+            let formattedSources = '';
+            
+            for (const line of lines) {
+                if (line.startsWith('•')) {
+                    const parts = line.split('|');
+                    if (parts.length === 2) {
+                        const description = parts[0].replace('•', '').trim();
+                        let url = parts[1].trim();
+                        
+                        // Clean and validate URL
+                        url = cleanURL(url);
+                        
+                        if (url && isValidURL(url)) {
+                            formattedSources += `<div style="margin-bottom: 15px;">
+                                <div style="font-weight: 700; color: #1a202c; margin-bottom: 5px;">${description}</div>
+                                <a href="${url}" target="_blank" rel="noopener noreferrer" class="source-link" onclick="openURL('${url}'); return false;">Visit Site</a>
+                            </div>`;
+                        } else {
+                            // If URL is invalid, show description only
+                            formattedSources += `<div style="margin-bottom: 15px;">
+                                <div style="font-weight: 700; color: #1a202c;">${description}</div>
+                                <span style="color: #e53e3e; font-size: 0.9rem;">Source link not available</span>
+                            </div>`;
+                        }
+                    } else {
+                        // Fallback for URLs without pipe separator
+                        const urlMatch = line.match(/(https?:\/\/[^\s\[\]]+)/);
+                        if (urlMatch) {
+                            let url = cleanURL(urlMatch[0]);
+                            const description = line.replace(urlMatch[0], '').replace('•', '').replace(':', '').trim();
+                            
+                            if (isValidURL(url)) {
+                                formattedSources += `<div style="margin-bottom: 15px;">
+                                    <div style="font-weight: 700; color: #1a202c; margin-bottom: 5px;">${description}</div>
+                                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="source-link" onclick="openURL('${url}'); return false;">Visit Site</a>
+                                </div>`;
+                            }
+                        } else {
+                            // No URL found, just show text
+                            formattedSources += `<div style="margin-bottom: 10px; font-weight: 600; color: #1a202c;">${line.replace('•', '').trim()}</div>`;
+                        }
+                    }
+                }
+            }
+            
+            return formattedSources;
+        }
+
+        // Clean URL to remove problematic characters
+        function cleanURL(url) {
+            if (!url) return '';
+            
+            // Remove surrounding brackets, quotes, and whitespace
+            url = url.replace(/[\[\]"'`]/g, '').trim();
+            
+            // Add https if no protocol
+            if (url && !url.match(/^https?:\/\//)) {
+                url = 'https://' + url;
+            }
+            
+            // Remove trailing punctuation that might break URLs
+            url = url.replace(/[,;:.!?]+$/, '');
+            
+            return url;
+        }
+
+        // Enhanced URL validation
+        function isValidURL(string) {
+            if (!string || typeof string !== 'string') return false;
+            
+            try {
+                const url = new URL(string);
+                // Check for valid protocols and basic domain structure
+                return (url.protocol === "http:" || url.protocol === "https:") && 
+                       url.hostname.includes('.') && 
+                       url.hostname.length > 3;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        // Safe URL opener function
+        function openURL(url) {
+            try {
+                if (isValidURL(url)) {
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                } else {
+                    alert('Invalid URL: ' + url);
+                }
+            } catch (error) {
+                console.error('Error opening URL:', error);
+                alert('Could not open link. URL may be invalid.');
+            }
+        }
+
+        // Display formatted results
+        function displayResults(data) {
+            const sections = parseResults(data.result);
+            const verdict = sections['VERDICT'] || 'UNKNOWN';
+            const confidence = parseInt(sections['CONFIDENCE_SCORE']) || 50;
+            
+            const verdictClass = verdict === 'TRUE' ? 'verdict-true' : 
+                                verdict === 'FALSE' ? 'verdict-false' : 
+                                verdict === 'PARTIALLY TRUE' ? 'verdict-partial' : 'verdict-box';
+
+            resultsSection.innerHTML = `
+                <div class="results-grid">
+                    <div class="verdict-box ${verdictClass}">
+                        <div class="verdict-text">${verdict}</div>
+                        <div class="confidence-text">Confidence: ${confidence}%</div>
+                    </div>
+                    <div class="charts-container">
+                        <div class="chart-box">
+                            <div class="chart-title">Confidence Analysis</div>
+                            <div style="height: 200px; position: relative;">
+                                <canvas id="confidenceChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-box">
+                            <div class="chart-title">Assessment Overview</div>
+                            <div style="height: 200px; position: relative;">
+                                <canvas id="verdictChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-boxes">
+                    ${sections['SUMMARY'] ? `
+                        <div class="info-box summary-box">
+                            <div class="box-title">📝 Summary</div>
+                            <div class="box-content" style="font-weight: 600; font-size: 1.1rem; color: #1a202c;">${sections['SUMMARY']}</div>
+                        </div>
+                    ` : ''}
+
+                    ${sections['KEY_EVIDENCE'] ? `
+                        <div class="info-box evidence-box">
+                            <div class="box-title">🔍 Key Supporting Evidence</div>
+                            <div class="box-content">
+                                <ul>
+                                    ${sections['KEY_EVIDENCE'].split('\n').map(line => 
+                                        line.startsWith('•') ? `<li>${line.replace('•', '').trim()}</li>` : ''
+                                    ).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${sections['TRUSTED_SOURCES'] ? `
+                        <div class="info-box sources-box">
+                            <div class="box-title">🔗 Trusted Sources</div>
+                            <div class="box-content">
+                                ${formatSources(sections['TRUSTED_SOURCES'])}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${sections['ADDITIONAL_CONTEXT'] ? `
+                        <div class="info-box context-box">
+                            <div class="box-title">⚠️ Additional Context</div>
+                            <div class="box-content">${sections['ADDITIONAL_CONTEXT']}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            // Create charts after DOM is updated
+            setTimeout(() => createCharts(confidence, verdict), 100);
+        }
+
+        // Show error message
+        function showError(message) {
+            resultsSection.innerHTML = `<div class="error-message">${message}</div>`;
+        }
+
+        // Main verification function
+        async function verifyInformation() {
+            const query = textInput.value.trim();
+            
+            if (query.length < 10) {
+                showError('Please enter at least 10 characters for meaningful verification.');
+                return;
+            }
+
+            verifyButton.disabled = true;
+            buttonText.innerHTML = '<div class="loader"></div> Analyzing...';
+            resultsSection.innerHTML = '<div style="text-align: center; padding: 40px; color: #718096;">Processing your request... This may take a few moments.</div>';
+
+            try {
+                const response = await fetch('http://localhost:3000/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query }),
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                displayResults(data);
+
+            } catch (error) {
+                console.error("Verification error:", error);
+                showError('An error occurred while processing your request. Please check your connection and try again.');
+            } finally {
+                verifyButton.disabled = false;
+                buttonText.innerHTML = 'Verify Information';
+            }
+        }
+
+        // Event listeners
+        verifyButton.addEventListener('click', verifyInformation);
+        textInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                verifyInformation();
+            }
+        });
+
+        textInput.focus();
+    </script>
 </body>
 </html>

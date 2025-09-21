@@ -1,4 +1,4 @@
-body {
+/* body {
     font-family: sans-serif;
     background-color: #f0f4f8;
     color: #333;
@@ -57,4 +57,4 @@ button {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
+} */
